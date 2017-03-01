@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=utf-8>
+    <title>My first three.js app</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%
+        }
+    </style>
+</head>
+<body>
+<script src="three-js/three.min.js"></script>
+<script src="three-js/TrackballControls.js"></script>
+<script src="three-js/Detector.js"></script>
+<script>
+
+    if (!Detector.webgl) {
+        Detector.addGetWebGLMessage();
+    }
+
+    var renderer, scene, camera, controls, pointLight, ambientLight;
+    var plane, sphere, item;
+    var gridLength = 50;
+    var symbols = new Array(gridLength);
+    for (var i = 0; i < gridLength; i++) {
+        symbols[i] = new Array(gridLength);
+    }
+    var heights = new Array(gridLength);
+    for (var i = 0; i < gridLength; i++) {
+        heights[i] = new Array(gridLength);
+    }
+    var symbol = new THREE.Object3D();
+    var group = new THREE.Object3D();
+
+    init();
+    animate();
+
+    function init() {
+        if (!Detector.webgl) {
+            renderer = new THREE.CanvasRenderer({
+                antialias: true
+            });
+        } else {
+            renderer = new THREE.WebGLRenderer({
+                antialias: true
+            });
+        }
+
+        var geometry, material, mesh, info;
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        scene = new THREE.Scene();
+
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.set(-5, 100, 100);
+        controls = new THREE.TrackballControls(camera, renderer.domElement);
+        var css = document.body.appendChild(document.createElement('style'));
+        css.innerHTML = 'body {font: 600 12pt monospace; margin: 0; overflow: hidden; text-align: center; }';
+
+        // add stuff that provides a visual frame of reference
+        material = new THREE.MeshBasicMaterial({
+            color:  0x5b5b5b,
+            side: THREE.DoubleSide
+        });
+        geometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);
+        geometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+        plane = new THREE.Mesh(geometry, material);
+        scene.add(plane);
+
+        //add lights
+        var sphere = new THREE.SphereGeometry( 0.5, 16, 8 );
+        pointLight = new THREE.PointLight( 0xff0040, 20, 50 );
+        pointLight.add( new THREE.Mesh( sphere, new THREE.MeshBasicMaterial( { color: 0xff0040 } ) ) );
+        scene.add( pointLight );
+        pointLight.position.x = 50;
+        pointLight.position.y = 30;
+        pointLight.position.z = 50;
+
+        var ambiColor = "#0a0c0c";
+        ambientLight = new THREE.AmbientLight(ambiColor, 4);
+        scene.add(ambientLight);
+
+        //texture loader
+        material = new THREE.MeshPhongMaterial( { map: THREE.ImageUtils.loadTexture('cement.jpg') } );
+
+        for (var i = 0; i < gridLength; i++) {
+            for (var j = 0; j < gridLength; j++) {
+                var height = getRandomInt(0, 15);
+                if(height <= 2)
+                {
+                    heights[i][j] = 0;
+                }else {
+                    heights[i][j] = height;
+                    // create the 'symbol' and add to array of symbols
+                    geometryTorus = new THREE.BoxGeometry(1, height, 1);
+                    materialTorus = new THREE.MeshBasicMaterial({
+                        color: height * 10 * 0x00ffff
+                    });
+
+                    item = new THREE.Mesh(geometryTorus, material);
+
+                    symbols[i][j] = item;
+
+                }
+
+            }
+        }
+        disperseRandom();
+    }
+
+    function disperseRandom() {
+        for (var i = 0; i < gridLength; i++) {
+            for (var j = 0; j < gridLength; j++) {
+                if(heights[i][j] != 0)
+                {
+                    var sym = symbols[i][j];
+                    var currentHeight = heights[i][j]/2 + 0.1;
+                    sym.position.set(i * 2 - 25, currentHeight, j * 2 - 25);
+                    group.add(sym);
+                }
+            }
+        }
+        scene.add(group);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+</script>
+</body>
+</html>
