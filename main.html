@@ -8,16 +8,43 @@
             margin: 0;
         }
 
-        canvas {
-            width: 100%;
+        .canvas {
+            width: 80%;
             height: 100%
         }
+
+        .container
+        {
+            height: 100%; /* 100% Full-height */
+            width: 250px; /* 0 width - change this with JavaScript */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Stay on top */
+            top: 0;
+            left: 0;
+            background-color: rgba(201, 201, 201, 0.9); /* Black*/
+            overflow-x: hidden; /* Disable horizontal scroll */
+            padding-top: 60px; /* Place content 60px from the top */
+            transition: 0.5s; /* 0.5 second transition effect to slide in the sidenav */
+        }
+
+
     </style>
 </head>
+
 <body>
-<script src="three-js/three.min.js"></script>
-<script src="three-js/TrackballControls.js"></script>
-<script src="three-js/Detector.js"></script>
+<div class="container">
+    <h2>Basic Panel</h2>
+    <label><input type='checkbox' onclick='checkBox(this);'>Forest<br /></label>
+    <label><input type='checkbox' onclick='checkBox(this);'>Field<br /></label>
+    <label><input type='checkbox' onclick='checkBox(this);'>Farm<br /></label>
+    <label><input type='checkbox' onclick='checkBox(this);'>Desert<br /></label>
+    <label><input type='checkbox' onclick='checkBox(this);'>Water<br /></label>
+    <button onclick="applyChanges(this)">Apply</button>
+    </div>
+
+<script src="build/three.js"></script>
+<script src="js/TrackballControls.js"></script>
+<script src="examples/js/Detector.js"></script>
 <script>
 
     if (!Detector.webgl) {
@@ -88,7 +115,7 @@
         scene.add(ambientLight);
 
         //texture loader
-        material = new THREE.MeshPhongMaterial( { map: THREE.ImageUtils.loadTexture('cement.jpg') } );
+        var material = new THREE.MeshPhongMaterial( { map: THREE.ImageUtils.loadTexture('cement.jpg') } );
 
         for (var i = 0; i < gridLength; i++) {
             for (var j = 0; j < gridLength; j++) {
@@ -138,6 +165,11 @@
 
     function getRandomInt(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function checkBox(cb)
+    {
+
     }
 
 </script>
