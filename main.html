@@ -49,170 +49,489 @@
 <script src="three-js/three.min.js"></script>
 <script src="three-js/TrackballControls.js"></script>
 <script src="three-js/Detector.js"></script>
+<script src="libraries/OBJLoader.js"></script>
+<script src="libraries/OrbitControls.js"></script>
+<script type="text/javascript" src="models.js"></script>
+
+<!--Adding the vertex shader-->
+<script type="x-shader/x-vertex" id="vertexShader">
+    attribute float vertexDisplacement;
+    uniform float delta;
+    varying float vOpacity;
+    varying vec3 vUv;
+
+    void main() {
+    vUv = position;
+    vOpacity = vertexDisplacement;
+
+    vec3 p = position;
+
+    p.z += sin(vertexDisplacement) * 10.0;
+    p.y += cos(vertexDisplacement) * 10.0;
+
+        vec4 modelViewPosition = modelViewMatrix * vec4(p, 1.0);
+        gl_Position = projectionMatrix * modelViewPosition;
+    }
+</script>
+
+<script type="x-shader/x-fragment" id="fragmentShader">
+    uniform float delta;
+    varying float vOpacity;
+    varying vec3 vUv;
+
+    void main() {
+        float red = 0.3 + cos(vUv.x * delta);
+        float green = 1.0 + sin(delta) * 0.5;
+        float blue = 0.0;
+
+        gl_FragColor = vec4(red, green, blue, 0.2); // color value for each pixel
+    }
+</script>
+
+<!--Main Script -->
 <script>
-//checkboxes
-var cbForest = document.getElementById("cbForest");
-var cbField = document.getElementById("cbField");
-var cbFarm = document.getElementById("cbFarm");
-var cbDesert = document.getElementById("cbDesert");
-var cbWater = document.getElementById("cbWater");
+    //checkboxes
+    var cbForest = document.getElementById("cbForest");
+    var cbField = document.getElementById("cbField");
+    var cbFarm = document.getElementById("cbFarm");
+    var cbDesert = document.getElementById("cbDesert");
+    var cbWater = document.getElementById("cbWater");
+
+    var treeObjects = [];
+    var controls;
+    var moreControls;
+    var mouse = { x: 0, y: 0 };
+    var worldWidth = 256, worldDepth = 256, worldHalfWidth = worldWidth / 2, worldHalfDepth = worldDepth / 2;
+
+    // SCENE
+    var scene = new THREE.Scene(); // Create a Three.js scene object.
+    //scene.fog = new THREE.Fog( 0x050505, 1, 4000 );
+
+    // CAMERA
+    var camera = new THREE.PerspectiveCamera(20, window.innerWidth / window.innerHeight, 1, 10000); // Define the perspective camera's attributes.
+    camera.position.set(0, 0, 150);
+    //camera.lookAt(scene.position);
+
+    // RENDERER
+    var renderer = window.WebGLRenderingContext ? new THREE.WebGLRenderer() : new THREE.CanvasRenderer(); // Fallback to canvas renderer, if necessary.
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight); // Set the size of the WebGL viewport.
+    renderer.setClearColor( 0xffffff );
+    document.getElementById( 'ThreeJS' );
+    document.body.appendChild( renderer.domElement );
+
+    // CONTROLS
+    controls = new THREE.OrbitControls( camera, renderer.domElement);
+    //moreControls = new THREE.TrackballControls(camera, renderer.domElement);
+
+    // LISTENERS
+    // when the mouse moves, call the given function
+    document.addEventListener( 'mousedown', onMouseDrag, false );
+
+    // GEOMETRY SIZES
+
+    // GEOMETRY DEFINITIONS
+    var gridSize = 50;
+    var grid = new THREE.GridHelper(gridSize, gridSize, 0x8B8B8B, 0x8B8B8B);
+    var geometry = new THREE.PlaneBufferGeometry( 50, 50, worldWidth - 1, worldDepth - 1 );
+    var cubeGeometry = new THREE.BoxGeometry(1, 1, 0);
+    var hexGeometry = new THREE.CylinderGeometry(4, 4, 1, 6);
+
+    // LIGHT DEFINITIONS
+    // lights are implemented afterwards because we might want to point a light towards a mesh
+    var ambientlight = new THREE.AmbientLight( 0xfff000, 0.5 );             // soft white light
+    var pointLight = new THREE.PointLight( 0xffffff, 0.65, 1000 );
+    var directionalLight = new THREE.DirectionalLight( 0xffffff, 1, 1000 );
+    directionalLight.castShadow = true;
+    directionalLight.shadow.camera.zoom = 4;
+
+    // preset colors options for the tile colors
+    // water, sand, buildings, vegetation
+    var tileColors = [0xA3CBFF, 0xF6EDDA, 0xEAEAEA, 0xCBE6A3];
+
+    // arrays to store the positions of each tile
+    var vegetationTilePositions = [];
+    var waterTilePositions = [];
+    var sandTilePositions = [];
+    var buildingsTilePositions = [];
 
 
-if(cbForest.checked == true)
-{
+    // SCENE ADDITIONS
 
-}
-if(cbField.checked == true)
-{
+    // Adds hexagon tiles in the respective position
+    // adds odd-numbered rows
+    for(var i = 0; i < 8; i++) {
+        // row 1
+        var object = new THREE.Mesh(hexGeometry, new THREE.MeshBasicMaterial({
+            color: tileColors[Math.floor(Math.random() * 4)],
+            opacity: 0.4 }));
 
-}
-if(cbFarm.checked == true)
-{
+        object.position.x = (gridSize / 2) - i * 7;
+        object.position.z = gridSize / 2;
 
-}
-if(cbDesert.checked == true)
-{
+        addPosition(object);
+        scene.add(object);
 
-}
-if(cbWater.checked == true)
-{
+        // row 3
+        var object = new THREE.Mesh(hexGeometry, new THREE.MeshBasicMaterial({
+            color: tileColors[Math.floor(Math.random() * 4)],
+            opacity: 0.4 }));
 
-}
+        object.position.x = (gridSize / 2) - i * 7;
+        object.position.z = gridSize / 2 - 12;
 
-function sliderValue(value)
-{
-    document.getElementById("range").innerHTML=value;
-}
+        addPosition(object);
+        scene.add(object);
 
+        // row 5
+        var object = new THREE.Mesh(hexGeometry, new THREE.MeshBasicMaterial({
+            color: tileColors[Math.floor(Math.random() * 4)],
+            opacity: 0.4 }));
 
+        object.position.x = (gridSize / 2) - i * 7;
+        object.position.z = gridSize / 2 - 24;
 
-    if (!Detector.webgl) {
-        Detector.addGetWebGLMessage();
+        addPosition(object);
+        scene.add(object);
+
+        // row 7
+        var object = new THREE.Mesh(hexGeometry, new THREE.MeshBasicMaterial({
+            color: tileColors[Math.floor(Math.random() * 4)],
+            opacity: 0.4 }));
+
+        object.position.x = (gridSize / 2) - i * 7;
+        object.position.z = gridSize / 2 - 36;
+
+        addPosition(object);
+        scene.add(object);
+
+        // row 9
+        var object = new THREE.Mesh(hexGeometry, new THREE.MeshBasicMaterial({
+            color: tileColors[Math.floor(Math.random() * 4)],
+            opacity: 0.4 }));
+
+        object.position.x = (gridSize / 2) - i * 7;
+        object.position.z = gridSize / 2 - 48;
+
+        addPosition(object);
+        scene.add(object);
     }
 
-    var renderer, scene, camera, controls, pointLight, ambientLight;
-    var plane, sphere, item;
-    var gridLength = 50;
-    var symbols = new Array(gridLength);
-    for (var i = 0; i < gridLength; i++) {
-        symbols[i] = new Array(gridLength);
-    }
-    var types = new Array(gridLength);
-    for (var i = 0; i < gridLength; i++) {
-        types[i] = new Array(gridLength);
-    }
-    var symbol = new THREE.Object3D();
-    var group = new THREE.Object3D();
+    // even-numbered rows
+    for(var i = 0; i < 9; i++) {
 
-    init();
-    animate();
+        // row 2
+        var object = new THREE.Mesh(hexGeometry, new THREE.MeshBasicMaterial({
+            color: tileColors[Math.floor(Math.random() * 4)],
+            opacity: 0.4 }));
 
-    function init() {
-        if (!Detector.webgl) {
-            renderer = new THREE.CanvasRenderer({
-                antialias: true
-            });
-        } else {
-            renderer = new THREE.WebGLRenderer({
-                antialias: true
-            });
+        if( i === 0) {
+            object.position.x = gridSize / 2 + 3.5;
+            object.position.z = gridSize / 2 - 6;
+            addPosition(object);
+            scene.add(object);
+            continue;
         }
 
-        var geometry, material, mesh, info;
+        object.position.x = (gridSize / 2) + (3.5 - (i * 7));
+        object.position.z = gridSize / 2 - 6;
 
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
-        scene = new THREE.Scene();
+        addPosition(object);
+        scene.add(object);
 
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
-        camera.position.set(-5, 100, 100);
-        controls = new THREE.TrackballControls(camera, renderer.domElement);
-        var css = document.body.appendChild(document.createElement('style'));
-        css.innerHTML = 'body {font: 600 12pt monospace; margin: 0; overflow: hidden; text-align: center; }';
+        // row 4
+        var object = new THREE.Mesh(hexGeometry, new THREE.MeshBasicMaterial({
+            color: tileColors[Math.floor(Math.random() * 4)],
+            opacity: 0.4 }));
 
-        // add stuff that provides a visual frame of reference
-        material = new THREE.MeshBasicMaterial({
-            color: 0x5b5b5b,
-            side: THREE.DoubleSide
-        });
-        geometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);
-        geometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
-        plane = new THREE.Mesh(geometry, material);
-        scene.add(plane);
-
-        //add lights
-        var sphere = new THREE.SphereGeometry(0.5, 16, 8);
-        pointLight = new THREE.PointLight(0xff0040, 20, 50);
-        pointLight.add(new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({color: 0xff0040})));
-        scene.add(pointLight);
-        pointLight.position.x = 50;
-        pointLight.position.y = 30;
-        pointLight.position.z = 50;
-
-        var ambiColor = "#0a0c0c";
-        ambientLight = new THREE.AmbientLight(ambiColor, 4);
-        scene.add(ambientLight);
-
-        //texture loader
-        var material = new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('cement.jpg')});
-
-        for (var i = 0; i < gridLength; i++) {
-            for (var j = 0; j < gridLength; j++) {
-                var height = 1;
-
-                types[i][j] = height;
-                // create the 'symbol' and add to array of symbols
-                geometryTorus = new THREE.BoxGeometry(2, 0.5, 2);
-                materialTorus = new THREE.MeshBasicMaterial({
-                    color: height * 10 * 0x00ffff
-                });
-
-                item = new THREE.Mesh(geometryTorus, material);
-
-                symbols[i][j] = item;
-
-            }
+        if( i === 0) {
+            object.position.x = gridSize / 2 + 3.5;
+            object.position.z = gridSize / 2 - 18;
+            addPosition(object);
+            scene.add(object);
+            continue;
         }
-        disperseRandom();
-    }
 
-    function disperseRandom() {
-        for (var i = 0; i < gridLength; i++) {
-            for (var j = 0; j < gridLength; j++) {
-                if (types[i][j] != 0) {
-                    var sym = symbols[i][j];
-                    var currentHeight = types[i][j] / 2 + 0.1;
-                    sym.position.set(i * 2, currentHeight, j * 2);
-                    group.add(sym);
-                }
-            }
+        object.position.x = (gridSize / 2) + (3.5 - (i * 7));
+        object.position.y = 0;
+        object.position.z = gridSize / 2 - 18;
+
+        addPosition(object);
+        scene.add(object);
+
+        // row6
+        var object = new THREE.Mesh(hexGeometry, new THREE.MeshBasicMaterial({
+            color: tileColors[Math.floor(Math.random() * 4)],
+            opacity: 0.4 }));
+
+        if( i === 0) {
+            object.position.x = gridSize / 2 + 3.5;
+            object.position.z = gridSize / 2 - 30;
+            addPosition(object);
+            scene.add(object);
+            continue;
         }
-        scene.add(group);
+
+        object.position.x = (gridSize / 2) + (3.5 - (i * 7));
+        object.position.y = 0;
+        object.position.z = gridSize / 2 - 30;
+
+        addPosition(object);
+        scene.add(object);
+
+        // row 8
+        var object = new THREE.Mesh(hexGeometry, new THREE.MeshBasicMaterial({
+            color: tileColors[Math.floor(Math.random() * 4)],
+            opacity: 0.4 }));
+
+        if( i === 0) {
+            object.position.x = gridSize / 2 + 3.5;
+            object.position.z = gridSize / 2 - 42;
+            addPosition(object);
+            scene.add(object);
+            continue;
+        }
+
+        object.position.x = (gridSize / 2) + (3.5 - (i * 7));
+        object.position.z = gridSize / 2 - 42;
+
+        addPosition(object);
+        scene.add(object);
     }
 
-    function getType()
-    {
-
+    // manages the position of each individual tile
+    function addPosition(object) {
+        switch(object.material.color.getHexString()) {
+            case "a3cbff":
+                waterTilePositions.push(object.position);
+                break;
+            case "f6edda":
+                sandTilePositions.push(object.position);
+                break;
+            case "eaeaea":
+                buildingsTilePositions.push(object.position);
+                break;
+            case "cbe6a3":
+                vegetationTilePositions.push(object.position);
+                break;
+        }
     }
 
-    function reshuffle(){
+    //Models
+
+    // adds a tree to every green tile
+    for(var i = 0; i < vegetationTilePositions.length; i++) {
+        if(i % 3 === 0) {
+            weepingWillow(vegetationTilePositions[i]);
+        }
+        if(i % 5 === 0) {
+            farmhouse(sandTilePositions[i]);
+        }
+        autumnTree(vegetationTilePositions[i]);
 
     }
+    ghosthouse(sandTilePositions[0]);
 
-    function animate() {
-        requestAnimationFrame(animate);
-        controls.update();
-        renderer.render(scene, camera);
+    scene.add(grid);
+
+    scene.add( ambientlight );
+    scene.add( pointLight );
+    scene.add( directionalLight );
+
+    // function to respond to mouse events
+    function onMouseDrag( event ) {
+        // prioritizes this event handler over others
+        event.preventDefault();
+
+        // update the mouse variable
+        mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+        mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
     }
 
-    function getRandomInt(min, max) {
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
 
     function checkBox(cb) {
         cb.checked;
     }
+    function sliderValue(value){
+        document.getElementById("range").innerHTML=value;
+    }
+    var render = function () {
+        // UPDATE ORBIT CONTROLS
+        controls.update();
+        //moreControls.update();
+        // BASICS OF THE RENDER FUNCTION
+        renderer.render(scene, camera);
 
+        requestAnimationFrame(render); // Calls render() up to 60 frames/second
+    };
+
+    render(); // Start the rendering of the animation frames.
 </script>
+
+<!--<script>-->
+<!--//checkboxes-->
+<!--var cbForest = document.getElementById("cbForest");-->
+<!--var cbField = document.getElementById("cbField");-->
+<!--var cbFarm = document.getElementById("cbFarm");-->
+<!--var cbDesert = document.getElementById("cbDesert");-->
+<!--var cbWater = document.getElementById("cbWater");-->
+
+
+<!--if(cbForest.checked == true)-->
+<!--{-->
+
+<!--}-->
+<!--if(cbField.checked == true)-->
+<!--{-->
+
+<!--}-->
+<!--if(cbFarm.checked == true)-->
+<!--{-->
+
+<!--}-->
+<!--if(cbDesert.checked == true)-->
+<!--{-->
+
+<!--}-->
+<!--if(cbWater.checked == true)-->
+<!--{-->
+
+<!--}-->
+
+<!--function sliderValue(value)-->
+<!--{-->
+    <!--document.getElementById("range").innerHTML=value;-->
+<!--}-->
+
+
+
+    <!--if (!Detector.webgl) {-->
+        <!--Detector.addGetWebGLMessage();-->
+    <!--}-->
+
+    <!--var renderer, scene, camera, controls, pointLight, ambientLight;-->
+    <!--var plane, sphere, item;-->
+    <!--var gridLength = 50;-->
+    <!--var symbols = new Array(gridLength);-->
+    <!--for (var i = 0; i < gridLength; i++) {-->
+        <!--symbols[i] = new Array(gridLength);-->
+    <!--}-->
+    <!--var types = new Array(gridLength);-->
+    <!--for (var i = 0; i < gridLength; i++) {-->
+        <!--types[i] = new Array(gridLength);-->
+    <!--}-->
+    <!--var symbol = new THREE.Object3D();-->
+    <!--var group = new THREE.Object3D();-->
+
+    <!--init();-->
+    <!--animate();-->
+
+    <!--function init() {-->
+        <!--if (!Detector.webgl) {-->
+            <!--renderer = new THREE.CanvasRenderer({-->
+                <!--antialias: true-->
+            <!--});-->
+        <!--} else {-->
+            <!--renderer = new THREE.WebGLRenderer({-->
+                <!--antialias: true-->
+            <!--});-->
+        <!--}-->
+
+        <!--var geometry, material, mesh, info;-->
+
+        <!--renderer.setSize(window.innerWidth, window.innerHeight);-->
+        <!--document.body.appendChild(renderer.domElement);-->
+        <!--scene = new THREE.Scene();-->
+
+        <!--camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);-->
+        <!--camera.position.set(-5, 100, 100);-->
+        <!--controls = new THREE.TrackballControls(camera, renderer.domElement);-->
+        <!--var css = document.body.appendChild(document.createElement('style'));-->
+        <!--css.innerHTML = 'body {font: 600 12pt monospace; margin: 0; overflow: hidden; text-align: center; }';-->
+
+        <!--// add stuff that provides a visual frame of reference-->
+        <!--material = new THREE.MeshBasicMaterial({-->
+            <!--color: 0x5b5b5b,-->
+            <!--side: THREE.DoubleSide-->
+        <!--});-->
+        <!--geometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);-->
+        <!--geometry.applyMatrix(new THREE.Matrix4().makeRotationX(-Math.PI / 2));-->
+        <!--plane = new THREE.Mesh(geometry, material);-->
+        <!--scene.add(plane);-->
+
+        <!--//add lights-->
+        <!--var sphere = new THREE.SphereGeometry(0.5, 16, 8);-->
+        <!--pointLight = new THREE.PointLight(0xff0040, 20, 50);-->
+        <!--pointLight.add(new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({color: 0xff0040})));-->
+        <!--scene.add(pointLight);-->
+        <!--pointLight.position.x = 50;-->
+        <!--pointLight.position.y = 30;-->
+        <!--pointLight.position.z = 50;-->
+
+        <!--var ambiColor = "#0a0c0c";-->
+        <!--ambientLight = new THREE.AmbientLight(ambiColor, 4);-->
+        <!--scene.add(ambientLight);-->
+
+        <!--//texture loader-->
+        <!--var material = new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('cement.jpg')});-->
+
+        <!--for (var i = 0; i < gridLength; i++) {-->
+            <!--for (var j = 0; j < gridLength; j++) {-->
+                <!--var height = 1;-->
+
+                <!--types[i][j] = height;-->
+                <!--// create the 'symbol' and add to array of symbols-->
+                <!--geometryTorus = new THREE.BoxGeometry(2, 0.5, 2);-->
+                <!--materialTorus = new THREE.MeshBasicMaterial({-->
+                    <!--color: height * 10 * 0x00ffff-->
+                <!--});-->
+
+                <!--item = new THREE.Mesh(geometryTorus, material);-->
+
+                <!--symbols[i][j] = item;-->
+
+            <!--}-->
+        <!--}-->
+        <!--disperseRandom();-->
+    <!--}-->
+
+    <!--function disperseRandom() {-->
+        <!--for (var i = 0; i < gridLength; i++) {-->
+            <!--for (var j = 0; j < gridLength; j++) {-->
+                <!--if (types[i][j] != 0) {-->
+                    <!--var sym = symbols[i][j];-->
+                    <!--var currentHeight = types[i][j] / 2 + 0.1;-->
+                    <!--sym.position.set(i * 2, currentHeight, j * 2);-->
+                    <!--group.add(sym);-->
+                <!--}-->
+            <!--}-->
+        <!--}-->
+        <!--scene.add(group);-->
+    <!--}-->
+
+    <!--function getType()-->
+    <!--{-->
+
+    <!--}-->
+
+    <!--function reshuffle(){-->
+
+    <!--}-->
+
+    <!--function animate() {-->
+        <!--requestAnimationFrame(animate);-->
+        <!--controls.update();-->
+        <!--renderer.render(scene, camera);-->
+    <!--}-->
+
+    <!--function getRandomInt(min, max) {-->
+        <!--return Math.floor(Math.random() * (max - min + 1)) + min;-->
+    <!--}-->
+
+    <!--function checkBox(cb) {-->
+        <!--cb.checked;-->
+    <!--}-->
+
+<!--</script>-->
 </body>
 </html>
