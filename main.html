@@ -13,8 +13,7 @@
             height: 100%
         }
 
-        .container
-        {
+        .container {
             height: 100%; /* 100% Full-height */
             width: 250px; /* 0 width - change this with JavaScript */
             position: fixed; /* Stay in place */
@@ -34,18 +33,58 @@
 <body>
 <div class="container">
     <h2>Basic Panel</h2>
-    <label><input type='checkbox' onclick='checkBox(this);'>Forest<br /></label>
-    <label><input type='checkbox' onclick='checkBox(this);'>Field<br /></label>
-    <label><input type='checkbox' onclick='checkBox(this);'>Farm<br /></label>
-    <label><input type='checkbox' onclick='checkBox(this);'>Desert<br /></label>
-    <label><input type='checkbox' onclick='checkBox(this);'>Water<br /></label>
-    <button onclick="applyChanges(this)">Apply</button>
-    </div>
+    <label><input type="range" min="5" max="50" value="5" step="5" onchange="sliderValue(this.value)"/>Size<br/></label>
+    <span id="range">0</span>
+    <br/><br/>
 
-<script src="build/three.js"></script>
-<script src="js/TrackballControls.js"></script>
-<script src="examples/js/Detector.js"></script>
+    <label><input type='checkbox' id="cbForest" onclick="checkBox(this)" checked>Forest<br/></label>
+    <label><input type='checkbox' id="cbField" onclick="checkBox(this)" checked>Field<br/></label>
+    <label><input type='checkbox' id="cbFarm" onclick="checkBox(this)" >Farm<br/></label>
+    <label><input type='checkbox' id="cbDesert" onclick="checkBox(this)">Desert<br/></label>
+    <label><input type='checkbox' id="cbWater" onclick="checkBox(this)" checked>Water<br/></label>
+    <br/>
+    <button style="height:50px;width:100px"onclick="reshuffle()">Apply</button>
+</div>
+
+<script src="three-js/three.min.js"></script>
+<script src="three-js/TrackballControls.js"></script>
+<script src="three-js/Detector.js"></script>
 <script>
+//checkboxes
+var cbForest = document.getElementById("cbForest");
+var cbField = document.getElementById("cbField");
+var cbFarm = document.getElementById("cbFarm");
+var cbDesert = document.getElementById("cbDesert");
+var cbWater = document.getElementById("cbWater");
+
+
+if(cbForest.checked == true)
+{
+
+}
+if(cbField.checked == true)
+{
+
+}
+if(cbFarm.checked == true)
+{
+
+}
+if(cbDesert.checked == true)
+{
+
+}
+if(cbWater.checked == true)
+{
+
+}
+
+function sliderValue(value)
+{
+    document.getElementById("range").innerHTML=value;
+}
+
+
 
     if (!Detector.webgl) {
         Detector.addGetWebGLMessage();
@@ -58,9 +97,9 @@
     for (var i = 0; i < gridLength; i++) {
         symbols[i] = new Array(gridLength);
     }
-    var heights = new Array(gridLength);
+    var types = new Array(gridLength);
     for (var i = 0; i < gridLength; i++) {
-        heights[i] = new Array(gridLength);
+        types[i] = new Array(gridLength);
     }
     var symbol = new THREE.Object3D();
     var group = new THREE.Object3D();
@@ -93,7 +132,7 @@
 
         // add stuff that provides a visual frame of reference
         material = new THREE.MeshBasicMaterial({
-            color:  0x5b5b5b,
+            color: 0x5b5b5b,
             side: THREE.DoubleSide
         });
         geometry = new THREE.PlaneGeometry(1000, 1000, 1, 1);
@@ -102,10 +141,10 @@
         scene.add(plane);
 
         //add lights
-        var sphere = new THREE.SphereGeometry( 0.5, 16, 8 );
-        pointLight = new THREE.PointLight( 0xff0040, 20, 50 );
-        pointLight.add( new THREE.Mesh( sphere, new THREE.MeshBasicMaterial( { color: 0xff0040 } ) ) );
-        scene.add( pointLight );
+        var sphere = new THREE.SphereGeometry(0.5, 16, 8);
+        pointLight = new THREE.PointLight(0xff0040, 20, 50);
+        pointLight.add(new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({color: 0xff0040})));
+        scene.add(pointLight);
         pointLight.position.x = 50;
         pointLight.position.y = 30;
         pointLight.position.z = 50;
@@ -115,27 +154,22 @@
         scene.add(ambientLight);
 
         //texture loader
-        var material = new THREE.MeshPhongMaterial( { map: THREE.ImageUtils.loadTexture('cement.jpg') } );
+        var material = new THREE.MeshPhongMaterial({map: THREE.ImageUtils.loadTexture('cement.jpg')});
 
         for (var i = 0; i < gridLength; i++) {
             for (var j = 0; j < gridLength; j++) {
-                var height = getRandomInt(0, 15);
-                if(height <= 2)
-                {
-                    heights[i][j] = 0;
-                }else {
-                    heights[i][j] = height;
-                    // create the 'symbol' and add to array of symbols
-                    geometryTorus = new THREE.BoxGeometry(1, height, 1);
-                    materialTorus = new THREE.MeshBasicMaterial({
-                        color: height * 10 * 0x00ffff
-                    });
+                var height = 1;
 
-                    item = new THREE.Mesh(geometryTorus, material);
+                types[i][j] = height;
+                // create the 'symbol' and add to array of symbols
+                geometryTorus = new THREE.BoxGeometry(2, 0.5, 2);
+                materialTorus = new THREE.MeshBasicMaterial({
+                    color: height * 10 * 0x00ffff
+                });
 
-                    symbols[i][j] = item;
+                item = new THREE.Mesh(geometryTorus, material);
 
-                }
+                symbols[i][j] = item;
 
             }
         }
@@ -145,16 +179,24 @@
     function disperseRandom() {
         for (var i = 0; i < gridLength; i++) {
             for (var j = 0; j < gridLength; j++) {
-                if(heights[i][j] != 0)
-                {
+                if (types[i][j] != 0) {
                     var sym = symbols[i][j];
-                    var currentHeight = heights[i][j]/2 + 0.1;
-                    sym.position.set(i * 2 - 25, currentHeight, j * 2 - 25);
+                    var currentHeight = types[i][j] / 2 + 0.1;
+                    sym.position.set(i * 2, currentHeight, j * 2);
                     group.add(sym);
                 }
             }
         }
         scene.add(group);
+    }
+
+    function getType()
+    {
+
+    }
+
+    function reshuffle(){
+
     }
 
     function animate() {
@@ -167,9 +209,8 @@
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    function checkBox(cb)
-    {
-
+    function checkBox(cb) {
+        cb.checked;
     }
 
 </script>
